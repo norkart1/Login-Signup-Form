@@ -1,99 +1,60 @@
-const express = require("express")
-const path = require("path")
-const app = express()
-// const hbs = require("hbs")
-const LogInCollection = require("./mongo")
-const port = process.env.PORT || 3000
-app.use(express.json())
+const express = require("express");
+const path = require("path");
+const hbs = require("hbs");
+const LogInCollection = require("./mongo");
 
-app.use(express.urlencoded({ extended: false }))
+const app = express();
+const port = process.env.PORT || 3000;
 
-const tempelatePath = path.join(__dirname, '../tempelates')
-const publicPath = path.join(__dirname, '../public')
-console.log(publicPath);
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-app.set('view engine', 'hbs')
-app.set('views', tempelatePath)
-app.use(express.static(publicPath))
+// Paths
+const templatePath = path.join(__dirname, './templates'); // FIXED PATH
+app.set('views', templatePath);
 
+const publicPath = path.join(__dirname, "../public");
 
-// hbs.registerPartials(partialPath)
+// View Engine Setup
+app.set("view engine", "hbs");
+app.set("views", templatePath);
+app.use(express.static(publicPath));
 
+// Routes
+app.get("/", (req, res) => res.render("login"));
+app.get("/signup", (req, res) => res.render("signup"));
 
-app.get('/signup', (req, res) => {
-    res.render('signup')
-})
-app.get('/', (req, res) => {
-    res.render('login')
-})
-
-
-
-// app.get('/home', (req, res) => {
-//     res.render('home')
-// })
-
-app.post('/signup', async (req, res) => {
-    
-    // const data = new LogInCollection({
-    //     name: req.body.name,
-    //     password: req.body.password
-    // })
-    // await data.save()
-
-    const data = {
-        name: req.body.name,
-        password: req.body.password
-    }
-
-    const checking = await LogInCollection.findOne({ name: req.body.name })
-
-   try{
-    if (checking.name === req.body.name && checking.password===req.body.password) {
-        res.send("user details already exists")
-    }
-    else{
-        await LogInCollection.insertMany([data])
-    }
-   }
-   catch{
-    res.send("wrong inputs")
-   }
-
-    res.status(201).render("home", {
-        naming: req.body.name
-    })
-})
-
-
-app.post('/login', async (req, res) => {
-
+app.post("/signup", async (req, res) => {
     try {
-        const check = await LogInCollection.findOne({ name: req.body.name })
+        const { name, password } = req.body;
+        const existingUser = await LogInCollection.findOne({ name });
 
-        if (check.password === req.body.password) {
-            res.status(201).render("home", { naming: `${req.body.password}+${req.body.name}` })
+        if (existingUser) {
+            return res.send("User already exists. <a href='/'>Login here</a>");
         }
 
-        else {
-            res.send("incorrect password")
-        }
-
-
-    } 
-    
-    catch (e) {
-
-        res.send("wrong details")
-        
-
+        await LogInCollection.create({ name, password });
+        res.redirect("/");
+    } catch (err) {
+        res.send("Error in signup. Please try again.");
     }
+});
 
+app.post("/login", async (req, res) => {
+    try {
+        const { name, password } = req.body;
+        const user = await LogInCollection.findOne({ name });
 
-})
+        if (!user || user.password !== password) {
+            return res.send("Invalid login. <a href='/'>Try again</a>");
+        }
 
+        res.render("home", { naming: name });
+    } catch (err) {
+        res.send("Error in login. Please try again.");
+    }
+});
 
-
-app.listen(port, () => {
-    console.log('port connected');
-})
+// Server Start
+app.listen(port, () => console.log(`Server running on port ${port}`));
