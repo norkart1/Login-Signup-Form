@@ -11,14 +11,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Paths
-const templatePath = path.join(__dirname, './templates'); // FIXED PATH
-app.set('views', templatePath);
-
-const publicPath = path.join(__dirname, "../public");
+const templatePath = path.join(__dirname, "templates"); // Ensure this folder exists
+const publicPath = path.join(__dirname, "public");
 
 // View Engine Setup
 app.set("view engine", "hbs");
 app.set("views", templatePath);
+
+// Register Partials (If you use them)
+const partialsPath = path.join(__dirname, "templates/partials");
+hbs.registerPartials(partialsPath);
+
+// Static files (CSS, JS, images)
 app.use(express.static(publicPath));
 
 // Routes
@@ -50,7 +54,7 @@ app.post("/login", async (req, res) => {
             return res.send("Invalid login. <a href='/'>Try again</a>");
         }
 
-        res.render("home", { naming: name });
+        res.render("home", { naming: name }); // Pass user data to the template
     } catch (err) {
         res.send("Error in login. Please try again.");
     }
